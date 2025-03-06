@@ -1,0 +1,94 @@
+local Players = game:GetService("Players")
+local player = Players.LocalPlayer
+local TweenService = game:GetService("TweenService")
+
+-- Create GUI
+local gui = Instance.new("ScreenGui")
+gui.Name = "TeleportControl"
+gui.Parent = player:WaitForChild("PlayerGui")
+
+local toggleButton = Instance.new("TextButton")
+toggleButton.Size = UDim2.new(0, 200, 0, 50)
+toggleButton.Position = UDim2.new(0.5, -100, 0, 20)
+toggleButton.AnchorPoint = Vector2.new(0.5, 0)
+toggleButton.Text = "OFF"
+toggleButton.Font = Enum.Font.SciFi
+toggleButton.TextSize = 18
+toggleButton.BackgroundColor3 = Color3.fromRGB(255, 80, 80)
+toggleButton.Parent = gui
+
+-- Teleport system variables
+local teleportEnabled = false
+local loopActive = false
+local humanoidRootPart
+local parts = {}
+
+-- Get initial parts
+local function refreshParts()
+    local blueprintSpawn = workspace:FindFirstChild("BlueprintSpawn")
+    if blueprintSpawn and blueprintSpawn:IsA("Folder") then
+        parts = {}
+        for _, obj in ipairs(blueprintSpawn:GetChildren()) do
+            if obj:IsA("BasePart") then
+                table.insert(parts, obj)
+            end
+        end
+        table.sort(parts, function(a, b) return a.Name < b.Name end)
+    end
+end
+
+-- Character handling
+local function onCharacterAdded(character)
+    humanoidRootPart = character:WaitForChild("HumanoidRootPart")
+end
+
+player.CharacterAdded:Connect(onCharacterAdded)
+if player.Character then
+    onCharacterAdded(player.Character)
+end
+
+-- Toggle functionality
+local function updateButton()
+    toggleButton.Text = teleportEnabled and "ON" or "OFF"
+    TweenService:Create(toggleButton, TweenInfo.new(0.2), {
+        BackgroundColor3 = teleportEnabled 
+            and Color3.fromRGB(80, 255, 80) 
+            or Color3.fromRGB(255, 80, 80)
+    }):Play()
+end
+
+local function teleportLoop()
+    while teleportEnabled and humanoidRootPart do
+        refreshParts() -- Refresh parts list each cycle
+        for _, part in ipairs(parts) do
+            if not teleportEnabled then break end
+            humanoidRootPart.CFrame = part.CFrame
+            task.wait(1)
+        end
+    end
+    loopActive = false
+end
+
+toggleButton.MouseButton1Click:Connect(function()
+    teleportEnabled = not teleportEnabled
+    updateButton()
+    
+    if teleportEnabled and not loopActive then
+        loopActive = true
+        coroutine.wrap(teleportLoop)()
+    end
+end)
+
+-- Initial setup
+refreshParts()
+updateButton()
+
+-- Add hover effects
+toggleButton.MouseEnter:Connect(function()
+    TweenService:Create(toggleButton, TweenInfo.new(0.2), {
+        BackgroundColor3 = Color3.fromRGB(200, 200, 200)
+    }):Play()
+end)
+
+toggleButton.MouseLeave:Connect(updateButton)
+-- Made By thistextisdisappeared14. Dont copy please!
